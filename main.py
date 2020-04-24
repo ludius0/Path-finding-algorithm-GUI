@@ -1,40 +1,20 @@
 from tkinter import *
-import queue
-import time
 
-# Constant
-height = 600
-width = 600
-c = 10 # pixel size
-row_size = int(width/c)
-col_size = int(height/c)
+import breath_first_search_algorithm as bfsa
+import values as v
+c = v.c
 
-# Clicks
-first_click = True
-second_click = False
-mouse_bind_click = "<Button-1>"
-mouse_bind_motion = "<B1-Motion>"
-mouse_bind = mouse_bind_click
-
-# Colors
-start_color = "Purple"
-end_color = "Yellow"
-wall_color = "Black"
-checked_color = "Red"
-path_color = "Blue"
-empty_color = "White"
-
-
+### USER PAINT
 def check_back_grid(x, y): # Correcting grid (setting edges)
     if x <= 0: x = c
     if y <= 0: y = c
-    if x >= width-c: x = width - c
-    if y >= height-c: y = height - c
+    if x >= v.width-c: x = v.width - c
+    if y >= v.height-c: y = v.height - c
     return x, y
 
-
-def paint(event):
-    global first_click, second_click, grid, start, end, mouse_bind, canvas, color_
+def paint(event):   # Paint on canvas and save x and y to grid
+    global grid, canvas, start, end, color_
+    # Get coordinates of x and y
     x = event.x -(event.x % c)
     y = event.y -(event.y % c)
 
@@ -43,160 +23,108 @@ def paint(event):
     a = int(y/c) # rows
     b = int(x/c) # columns
 
-    if first_click == True:                                                 # Draw start
-        first_click = False
-        second_click = True
-        color_ = start_color
+    if v.first_click == True:                                                   # Draw start
+        v.first_click = False
+        v.second_click = True
+        
+        color_ = v.start_color
         start = (color_, x, y, a, b)
+        
         canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
         
-    elif second_click == True and (x, y) != (start[1], start[2]):           # Draw end
-        second_click = False
-        color_ = end_color
+    elif v.second_click == True and (x, y) != (start[1], start[2]):             # Draw end
+        v.second_click = False
+        v.mouse_bind = v.mouse_bind_motion
+        canvas.bind(v.mouse_bind, paint)
+        
+        color_ = v.end_color
         end = (color_, x, y, a, b)
-        mouse_bind = mouse_bind_motion
-        canvas.bind(mouse_bind, paint)
+        
         canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
         
-    elif (x, y) != (start[1], start[2]) and (x, y) != (end[1], end[2]):     # Draw wall
-        color_ = wall_color
-        end = (color_, x, y, a, b)
+    elif (x, y) != (start[1], start[2]) and (x, y) != (end[1], end[2]):       # Draw wall
+        color_ = v.wall_color
+        
         canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
 
     canvas.update()
 
+    # Write new nodes/cells/coordinates to grid
     for index, i in enumerate(grid):
         for index2, j in enumerate(i):
             if (x, y) == (j[1], j[2]):
                 grid[index][index2] = (color_, x, y, a, b)
 
-def paint_path(path):
-    color = path_color
-    for i in path:
-        x, y = int(i[1]), int(i[2])
-        x0, y0 = int(x+c-1), int(y+c-1)
-        canvas.create_rectangle(x, y, x0, y0, fill=color, outline=color)
 
-
-def paint_blank_grid():
+### GENERATE & PAINT ON CANVAS & USE ALGORITHM
+def paint_blank_grid():         # Generate blank grid of width*height lenght of cells
     global grid
     grid = []
-    for i in range(row_size):
+    for i in range(v.row_size):
         row = []
-        for j in range(col_size):
-            row.append((empty_color, j*c, i*c, i, j)) # (color, x, y, a, b)
+        for j in range(v.col_size):
+            row.append((v.empty_color, j*c, i*c, i, j)) # (color, x, y, a, b)
         grid.append(row)
 
+def paint_path(path, canvas):   # Paint path to end cell/node on canvas
+    if path != None:
+        for i in path:
+            x, y = int(i[1]), int(i[2])
+            x0, y0 = int(x+c-1), int(y+c-1)
+            canvas.create_rectangle(x, y, x0, y0, fill=v.path_color, outline=v.path_color)
 
-def check_neighbours(curr):
-    global grid
-    possible_moves = []
-    color, x, y, a, b = curr[0], curr[1], curr[2], curr[3], curr[4]
+def results(path, time):        # Write result data (steps and time of finishing)
+    global root
+    if path != None:
+        label1 = Label(root, text=f"It took {len(path)} steps. Time: {time} seconds")
+        label1.pack()
+    else:
+        label2 = Label(root, text=f"There can't be path. Time: {time} seconds")
+        label2.pack()
 
-    if x > c: # Left
-        if grid[a][b-1][0] == empty_color and (grid[a][b-1][1], grid[a][b-1][2]) == (x-c, y):
-            neighbour = (checked_color, grid[a][b-1][1], grid[a][b-1][2], grid[a][b-1][3], grid[a][b-1][4]) # (checked color, x, y, a, b)
-            
-            possible_moves.append(neighbour) 
-            grid[a][b-1] = neighbour
-            canvas.create_rectangle(grid[a][b-1][1], grid[a][b-1][2], grid[a][b-1][1]+c-1, grid[a][b-1][2]+c-1, fill=checked_color, outline=checked_color) # draw it
 
-        if grid[a][b-1][0] == end_color and (grid[a][b-1][1], grid[a][b-1][2]) == (x-c, y):
-            possible_moves.append(end)
-            return possible_moves
+def use_algorithm():            # Use breath first algorithm to get 
+    global grid, canvas, start, end, save_color
+    try:
+        path, end_time = bfsa.breath_first_search(grid, canvas, start, end)
+        paint_path(path, canvas)
+        results(path, end_time)
+        # After computationing -> user paint show_color (to highlight)
+        save_color = v.wall_color
+        v.wall_color = v.show_color
+    except:
+        pass
 
-    if x < (height-c): # Right
-        if grid[a][b+1][0] == empty_color and (grid[a][b+1][1], grid[a][b+1][2]) == (x+c, y):
-            neighbour = (checked_color, grid[a][b+1][1], grid[a][b+1][2], grid[a][b+1][3], grid[a][b+1][4])
-            
-            possible_moves.append(neighbour) 
-            grid[a][b+1] = neighbour
-            canvas.create_rectangle(grid[a][b+1][1], grid[a][b+1][2], grid[a][b+1][1]+c-1, grid[a][b+1][2]+c-1, fill=checked_color, outline=checked_color)
-            
-        if grid[a][b+1][0] == end_color and (grid[a][b+1][1], grid[a][b+1][2]) == (x+c, y):
-            possible_moves.append(end)
-            return possible_moves
-
-    if y > c: # Up
-        if grid[a-1][b][0] == empty_color and (grid[a-1][b][1], grid[a-1][b][2]) == (x, y-c):
-            neighbour = (checked_color, grid[a-1][b][1], grid[a-1][b][2], grid[a-1][b][3], grid[a-1][b][4])
-            
-            possible_moves.append(neighbour) 
-            grid[a-1][b] = neighbour
-            canvas.create_rectangle(grid[a-1][b][1], grid[a-1][b][2], grid[a-1][b][1]+c-1, grid[a-1][b][2]+c-1, fill=checked_color, outline=checked_color)
-
-        if grid[a-1][b][0] == end_color and (grid[a-1][b][1], grid[a-1][b][2]) == (x, y-c):
-            possible_moves.append(end)
-            return possible_moves
-
-    if y < (height-c): # Down
-        if grid[a+1][b][0] == empty_color and (grid[a+1][b][1], grid[a+1][b][2]) == (x, y+c):
-            neighbour = (checked_color, grid[a+1][b][1], grid[a+1][b][2], grid[a+1][b][3], grid[a+1][b][4])
-            
-            possible_moves.append(neighbour) 
-            grid[a+1][b] = neighbour
-            canvas.create_rectangle(grid[a+1][b][1], grid[a+1][b][2], grid[a+1][b][1]+c-1, grid[a+1][b][2]+c-1, fill=checked_color, outline=checked_color)
-
-        if grid[a-1][b][0] == end_color and (grid[a-1][b][1], grid[a-1][b][2]) == (x, y-c):
-            possible_moves.append(end)
-            return possible_moves
-            
-    canvas.update()
-    return possible_moves
-                                
-def breath_first_search():
-    global mouse_bind
-    frontier = queue.Queue()
-    frontier.put(start)
-    came_from = {}
-    came_from[start] = None
-    start_time = time.time()
-
-    # Algorithm
-    while not frontier.empty():
-        current = frontier.get()
-
-        if (current[1], current[2]) == (end[1], end[2]):
-            break
-        
-        neighbours_list = check_neighbours(current)
-        for next_ in neighbours_list:
-            if next_ not in came_from:
-                frontier.put(next_)
-                came_from[next_] = current
-    # Get path
-    current = end 
-    path = []
-    while current != start:
-        path.append(current)
-        current = came_from[current]
-    path.reverse()
-    path.pop(-1)
-    print(len(path))
-
-    end_time = time.time() - start_time
-    print(end_time)
-
-    paint_path(path)
-    
+### TKINTER GUI
+def restart_window():
+    global root, canvas, save_color
+    v.first_click = True
+    v.second_click = False
+    v.mouse_bind = v.mouse_bind_click
+    v.wall_color = save_color
+    root.destroy()
+    main()
     
 
 def main():
-    global canvas, button, click_bind
+    global root, canvas, button
     root = Tk()
     root.title("PATH FINDING ALGORITH by ludius0")
-    root.geometry(f"{width+c+c}x{height+100}")
+    root.geometry(f"{v.width+c+c}x{v.height+100}")
     root.config(bg="#ecf0f1")
     root.resizable(width=False, height=False)
 
-    canvas = Canvas(root, width=width, height=height, bg="white", borderwidth=2)
-    canvas.bind(mouse_bind, paint)
+    canvas = Canvas(root, width=v.width, height=v.height, bg="white", borderwidth=2)
+    canvas.bind(v.mouse_bind, paint)
     canvas.pack(side=TOP)
 
     paint_blank_grid()
 
-    button = Button(root, text="Use alg", command=breath_first_search)
-    button.pack(side=BOTTOM)
+    button1 = Button(root, text="Use breath first search algorithm", command=use_algorithm)
+    button1.pack()
+
+    button2 = Button(root, text="Restart window", command=restart_window)
+    button2.pack(side=BOTTOM)
 
 if __name__ == "__main__":
     main()
