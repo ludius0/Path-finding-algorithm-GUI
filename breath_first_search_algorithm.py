@@ -71,7 +71,8 @@ def breath_first_search(grid, canvas, start, end):
     For every loop we take current node/cell (current) and check neighbours (neighbours_list -> for loop with next_)
     And for every neighbour we check if it isn't already in dict(came_from) -> if not we add it to queue (frontier) and add to dict (came_from) with key as (current -> current node/cell)
     With every loop one element will be removed from Queue (frontier) and if it end up empty -> there isn't path
-    If it find end node/cell as neighbour; it will add it and break through loop
+    If it find end node/cell as neighbour; it will add it and break through loop.
+    Also you don't need queue module to do it: make list (frontier=[]) and pop firtst element (current = frontier.pop(0)) and frontier.put() replace for append and loop until list isn't empty or you find goal
     """
     frontier = queue.Queue()
     frontier.put(start)
