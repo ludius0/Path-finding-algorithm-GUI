@@ -3,7 +3,6 @@ import queue
 import time
 
 import values as v
-import main as m
 
 c = v.c
 
