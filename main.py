@@ -125,6 +125,8 @@ def main():
 
     button2 = Button(root, text="Restart window", command=restart_window)
     button2.pack(side=BOTTOM)
+    
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
