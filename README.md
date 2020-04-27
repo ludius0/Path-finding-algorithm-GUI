@@ -1,7 +1,6 @@
 # Path-finding-algorithm-GUI
 
-Tkinter GUI with path finding algorith as visual medium. You draw start and end (goal), after that you can draw walls and choose algorithm. Righ now there is only breath first search algorithm (I'm planning to add dijsktra and a* (and zooming feature for canvas)).
-Program show steps and time what it took to compute. After algorithm computing you can draw with highlight color. If you want use program again, you need press restart button.
+Tkinter GUI with path finding algorithm as visual medium. You draw start node and end node (goal), after that you can draw walls and choose algorithm. Later I want to add Astar algorithm. Right now there is only button for Astar without command. Program show steps and time of computing. After computation you can draw with highlight color. If you want use algorithm again, you need press restart button.
 
 UPDATE: I cleaned code -> I replace structure of ("color", x, y, a, b) to only (x, y) coordinates, which made code cleaner.
 
