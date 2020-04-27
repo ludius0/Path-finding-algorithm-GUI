@@ -2,6 +2,7 @@ from tkinter import *
 
 import breath_first_search_algorithm as bfsa
 import values as v
+
 c = v.c
 
 ### USER PAINT
@@ -13,47 +14,39 @@ def check_back_grid(x, y): # Correcting grid (setting edges)
     return x, y
 
 def paint(event):   # Paint on canvas and save x and y to grid
-    global grid, canvas, start, end, color_
+    global canvas, grid, color_, start, end, walls_list
     # Get coordinates of x and y
     x = event.x -(event.x % c)
     y = event.y -(event.y % c)
 
     x, y = check_back_grid(x, y)
 
-    a = int(y/c) # rows
-    b = int(x/c) # columns
-
     if v.first_click == True:                                                   # Draw start
         v.first_click = False
         v.second_click = True
         
+        start = (x, y)
         color_ = v.start_color
-        start = (color_, x, y, a, b)
+        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=v.start_color, outline=v.start_color)
         
-        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
-        
-    elif v.second_click == True and (x, y) != (start[1], start[2]):             # Draw end
+    elif v.second_click == True and (x, y) != start:             # Draw end
         v.second_click = False
         v.mouse_bind = v.mouse_bind_motion
         canvas.bind(v.mouse_bind, paint)
         
+        end = (x, y)
+        
         color_ = v.end_color
-        end = (color_, x, y, a, b)
+        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=v.end_color, outline=v.end_color)
         
-        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
-        
-    elif (x, y) != (start[1], start[2]) and (x, y) != (end[1], end[2]):       # Draw wall
+    elif (x, y) != start and (x, y) != end:       # Draw wall
         color_ = v.wall_color
         
-        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=color_, outline=color_)
+        canvas.create_rectangle(x, y, x+c-1, y+c-1, fill=v.wall_color, outline=v.wall_color)
+
+        grid[int(y/c)][int(x/c)] = (9999, 9999)             # Save wall to the grid
 
     canvas.update()
-
-    # Write new nodes/cells/coordinates to grid
-    for index, i in enumerate(grid):
-        for index2, j in enumerate(i):
-            if (x, y) == (j[1], j[2]):
-                grid[index][index2] = (color_, x, y, a, b)
 
 
 ### GENERATE & PAINT ON CANVAS & USE ALGORITHM
@@ -63,13 +56,14 @@ def paint_blank_grid():         # Generate blank grid of width*height lenght of 
     for i in range(v.row_size):
         row = []
         for j in range(v.col_size):
-            row.append((v.empty_color, j*c, i*c, i, j)) # (color, x, y, a, b)
+            row.append((j*c, i*c)) # (x, y)
         grid.append(row)
 
 def paint_path(path, canvas):   # Paint path to end cell/node on canvas
+    global start
     if path != None:
         for i in path:
-            x, y = int(i[1]), int(i[2])
+            x, y = int(i[0]), int(i[1])
             x0, y0 = int(x+c-1), int(y+c-1)
             canvas.create_rectangle(x, y, x0, y0, fill=v.path_color, outline=v.path_color)
 
@@ -83,25 +77,30 @@ def results(path, time):        # Write result data (steps and time of finishing
         label2.pack()
 
 
-def use_algorithm():            # Use breath first algorithm to get 
+def use_algorithm(choice):            # Use breath first algorithm to get 
     global grid, canvas, start, end, save_color
-    try:
-        path, end_time = bfsa.breath_first_search(grid, canvas, start, end)
-        paint_path(path, canvas)
-        results(path, end_time)
-        # After computationing -> user paint show_color (to highlight)
-        save_color = v.wall_color
-        v.wall_color = v.show_color
-    except:
+    # Breath first search algorithm
+    if choice == 0:
+        try:
+            path, end_time = bfsa.breath_first_search(canvas, grid, start, end)
+            paint_path(path, canvas)
+            results(path, end_time)
+            v.show_color, v.wall_color = v.wall_color, v.show_color # Highlighting
+        except:
+         print("Start and end nodes are missing.")
+    # A* algorithm
+    elif choice == 1:
         pass
+        
 
 ### TKINTER GUI
 def restart_window():
-    global root, canvas, save_color
+    global root, canvas, save_color, walls_list
     v.first_click = True
     v.second_click = False
     v.mouse_bind = v.mouse_bind_click
-    v.wall_color = save_color
+    v.wall_color, v.show_color = v.show_color, v.wall_color
+    walls_list = []
     root.destroy()
     main()
     
@@ -120,11 +119,14 @@ def main():
 
     paint_blank_grid()
 
-    button1 = Button(root, text="Use breath first search algorithm", command=use_algorithm)
-    button1.pack()
+    button1 = Button(root, text="Use breath first search algorithm", command=lambda:use_algorithm(0))
+    button1.pack(side=TOP)
 
-    button2 = Button(root, text="Restart window", command=restart_window)
-    button2.pack(side=BOTTOM)
+    button2 = Button(root, text="Use A* algorithm", command=lambda:use_algorithm(1))
+    button2.pack(ipadx=41, side=TOP)
+
+    button3 = Button(root, text="Restart window", command=restart_window)
+    button3.pack(ipadx=45, side=TOP)
     
     root.mainloop()
 
